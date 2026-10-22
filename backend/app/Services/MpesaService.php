@@ -8,7 +8,7 @@ use App\Models\PaymentReceipt;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Exception;
+use App\Exceptions\BusinessRuleException;
 
 class MpesaService
 {
@@ -63,7 +63,7 @@ class MpesaService
 
         $authRes = Http::withBasicAuth($consumerKey, $consumerSecret)->get($authUrl);
         if (!$authRes->successful()) {
-            throw new Exception("Daraja authentication failed: " . $authRes->body());
+            throw new BusinessRuleException("Daraja authentication failed: " . $authRes->body());
         }
 
         $accessToken = $authRes->json('access_token');

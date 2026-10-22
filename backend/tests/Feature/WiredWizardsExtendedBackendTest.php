@@ -95,17 +95,25 @@ class WiredWizardsExtendedBackendTest extends TestCase
     public function test_mpesa_stk_push_initiation(): void
     {
         $customer = User::where('email', 'peter@example.com')->first();
-        $order = \App\Models\Order::first();
+        $location = \App\Models\Location::where('code', 'MCK-RET')->first();
+        $product = Product::first();
 
-        if ($order) {
-            $res = $this->actingAs($customer)->postJson('/api/v1/payments/mpesa/stkpush', [
-                'phone' => '0712345678',
-                'amount' => 5000,
-                'order_id' => $order->id,
-            ]);
+        $checkoutRes = $this->actingAs($customer)->postJson('/api/v1/orders/checkout', [
+            'location_id' => $location->id,
+            'payment_method' => 'mpesa_stk',
+            'delivery_address' => ['county' => 'Machakos', 'town' => 'Machakos Town', 'physical_details' => 'Plot 4'],
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+        ])->assertStatus(201);
 
-            $res->assertStatus(200);
-            $this->assertArrayHasKey('daraja_response', $res->json());
-        }
+        $orderId = $checkoutRes->json('order.id');
+
+        $res = $this->actingAs($customer)->postJson('/api/v1/payments/mpesa/stkpush', [
+            'phone' => '0712345678',
+            'amount' => 5000,
+            'order_id' => $orderId,
+        ]);
+
+        $res->assertStatus(200);
+        $this->assertArrayHasKey('daraja_response', $res->json());
     }
 }

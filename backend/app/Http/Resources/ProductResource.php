@@ -69,6 +69,17 @@ class ProductResource extends JsonResource
                     'quantity_available' => $inv->available,
                 ]);
             }),
+            'reviews' => $this->whenLoaded('reviews', fn () => [
+                'average_rating' => round((float) $this->reviews->avg('rating'), 1),
+                'count' => $this->reviews->count(),
+                'items' => $this->reviews->map(fn ($r) => [
+                    'id' => $r->id,
+                    'rating' => $r->rating,
+                    'comment' => $r->comment,
+                    'customer_name' => $r->customer->name ?? 'Customer',
+                    'created_at' => $r->created_at->toISOString(),
+                ]),
+            ]),
             'created_at' => $this->created_at->toISOString(),
         ];
     }

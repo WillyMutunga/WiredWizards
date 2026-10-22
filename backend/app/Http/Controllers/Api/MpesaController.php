@@ -29,6 +29,7 @@ class MpesaController extends Controller
         ]);
 
         $order = Order::findOrFail($validated['order_id']);
+        $this->ensureCanView($request, $order->customer_id);
 
         $response = $this->mpesaService->initiateStkPush(
             $validated['phone'],

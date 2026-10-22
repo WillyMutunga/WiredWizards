@@ -78,8 +78,6 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'delivery_fee' => 'nullable|numeric|min:0',
         ]);
 
         $customerId = $request->user()->id;

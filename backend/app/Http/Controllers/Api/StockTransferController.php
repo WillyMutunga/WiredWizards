@@ -10,7 +10,7 @@ use App\Models\Inventory;
 use App\Services\DocumentNumberService;
 use App\Services\InventoryService;
 use Illuminate\Support\Facades\DB;
-use Exception;
+use App\Exceptions\BusinessRuleException;
 
 class StockTransferController extends Controller
 {
@@ -51,7 +51,7 @@ class StockTransferController extends Controller
                     ->first();
 
                 if (!$inv || $inv->available < $item['quantity']) {
-                    throw new Exception("Insufficient stock at sending location for product ID: {$item['product_id']}");
+                    throw new BusinessRuleException("Insufficient stock at sending location for product ID: {$item['product_id']}");
                 }
             }
 
@@ -83,16 +83,16 @@ class StockTransferController extends Controller
 
     public function dispatch(Request $request, $id)
     {
-        $transfer = StockTransfer::findOrFail($id);
+        DB::transaction(function () use ($id, $request) {
+            // Lock the transfer row so two clicks cannot dispatch it twice
+            $transfer = StockTransfer::with('items')->lockForUpdate()->findOrFail($id);
 
-        if ($transfer->status !== 'pending') {
-            return response()->json(['message' => 'Only pending transfers can be marked as dispatched.'], 422);
-        }
+            if ($transfer->status !== 'pending') {
+                throw new BusinessRuleException('Only pending transfers can be marked as dispatched.');
+            }
 
-        DB::transaction(function () use ($transfer, $request) {
-            // Deduct from source branch
             foreach ($transfer->items as $item) {
-                $this->inventoryService->deductStockForSale(
+                $this->inventoryService->transferOut(
                     $item->product_id,
                     $transfer->source_location_id,
                     $item->quantity_dispatched,
@@ -112,8 +112,11 @@ class StockTransferController extends Controller
 
     public function receive(Request $request, $id)
     {
-        $this->inventoryService->completeTransfer((int) $id, $request->user()->id);
+        $transfer = $this->inventoryService->completeTransfer((int) $id, $request->user()->id);
 
-        return response()->json(['message' => 'Transfer confirmed as received and stock updated at destination branch.']);
+        return response()->json([
+            'message' => 'Transfer confirmed as received and stock updated at destination branch.',
+            'transfer' => $transfer->load('items.product'),
+        ]);
     }
 }

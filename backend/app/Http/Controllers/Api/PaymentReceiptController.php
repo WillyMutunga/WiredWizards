@@ -29,9 +29,11 @@ class PaymentReceiptController extends Controller
         return response()->json($query->paginate(15));
     }
 
-    public function downloadPdf($id)
+    public function downloadPdf(Request $request, $id)
     {
         $receipt = PaymentReceipt::findOrFail($id);
+        $this->ensureCanView($request, $receipt->customer_id);
+
         $pdf = $this->pdfService->renderReceipt($receipt);
 
         return $pdf->stream("{$receipt->receipt_number}.pdf");

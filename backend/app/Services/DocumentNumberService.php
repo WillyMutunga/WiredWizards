@@ -2,54 +2,47 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\Quotation;
-use App\Models\Invoice;
-use App\Models\PaymentReceipt;
-use App\Models\StockTransfer;
-use App\Models\PurchaseRecord;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Collision-free document numbers backed by PostgreSQL sequences.
+ * nextval() is atomic, so two concurrent requests can never receive the same number.
+ */
 class DocumentNumberService
 {
+    private static function next(string $sequence, string $prefix): string
+    {
+        $n = DB::selectOne("SELECT nextval('$sequence') AS n")->n;
+        return sprintf('%s-%s-%06d', $prefix, date('Y'), $n);
+    }
+
     public static function generateOrderNumber(): string
     {
-        $year = date('Y');
-        $count = Order::whereYear('created_at', $year)->count() + 1;
-        return sprintf('ORD-%s-%06d', $year, $count);
+        return self::next('seq_ord', 'ORD');
     }
 
     public static function generateQuotationNumber(): string
     {
-        $year = date('Y');
-        $count = Quotation::whereYear('created_at', $year)->count() + 1;
-        return sprintf('QUO-%s-%06d', $year, $count);
+        return self::next('seq_quo', 'QUO');
     }
 
     public static function generateInvoiceNumber(): string
     {
-        $year = date('Y');
-        $count = Invoice::whereYear('created_at', $year)->count() + 1;
-        return sprintf('INV-%s-%06d', $year, $count);
+        return self::next('seq_inv', 'INV');
     }
 
     public static function generateReceiptNumber(): string
     {
-        $year = date('Y');
-        $count = PaymentReceipt::whereYear('created_at', $year)->count() + 1;
-        return sprintf('REC-%s-%06d', $year, $count);
+        return self::next('seq_rec', 'REC');
     }
 
     public static function generateTransferNumber(): string
     {
-        $year = date('Y');
-        $count = StockTransfer::whereYear('created_at', $year)->count() + 1;
-        return sprintf('TR-%s-%06d', $year, $count);
+        return self::next('seq_tr', 'TR');
     }
 
     public static function generatePurchaseReference(): string
     {
-        $year = date('Y');
-        $count = PurchaseRecord::whereYear('created_at', $year)->count() + 1;
-        return sprintf('PUR-%s-%06d', $year, $count);
+        return self::next('seq_pur', 'PUR');
     }
 }

@@ -41,9 +41,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::with(['customer.customerProfile', 'salesAgent', 'items', 'payments', 'order'])
             ->findOrFail($id);
 
-        if ($request->user()->role === 'customer' && $invoice->customer_id !== $request->user()->id) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
-        }
+        $this->ensureCanView($request, $invoice->customer_id);
 
         return response()->json($invoice);
     }
@@ -70,9 +68,11 @@ class InvoiceController extends Controller
         ], 201);
     }
 
-    public function downloadPdf($id)
+    public function downloadPdf(Request $request, $id)
     {
         $invoice = Invoice::findOrFail($id);
+        $this->ensureCanView($request, $invoice->customer_id);
+
         $pdf = $this->pdfService->renderInvoice($invoice);
 
         return $pdf->stream("{$invoice->invoice_number}.pdf");

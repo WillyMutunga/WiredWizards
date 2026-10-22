@@ -4,35 +4,45 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\Quotation;
-use App\Models\Invoice;
-use App\Models\PaymentReceipt;
+use App\Models\Product;
 
 class PdfGenerationTest extends TestCase
 {
     public function test_invoice_and_quotation_pdf_streams(): void
     {
         $admin = User::where('email', 'admin@wiredwizards.co.ke')->first();
-        $invoice = Invoice::first();
-        $quotation = Quotation::first();
-        $receipt = PaymentReceipt::first();
+        $customer = User::where('email', 'peter@example.com')->first();
+        $product = Product::first();
 
-        if ($quotation) {
-            $quotePdf = $this->actingAs($admin)->get("/api/v1/quotations/{$quotation->id}/pdf");
-            $quotePdf->assertStatus(200);
-            $this->assertEquals('application/pdf', $quotePdf->headers->get('content-type'));
-        }
+        // Create quotation -> invoice -> payment receipt
+        $quoteRes = $this->actingAs($admin)->postJson('/api/v1/quotations', [
+            'customer_id' => $customer->id,
+            'valid_until' => now()->addDays(10)->toDateString(),
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+        ])->assertStatus(201);
+        $quoteId = $quoteRes->json('quotation.id');
 
-        if ($invoice) {
-            $invPdf = $this->actingAs($admin)->get("/api/v1/invoices/{$invoice->id}/pdf");
-            $invPdf->assertStatus(200);
-            $this->assertEquals('application/pdf', $invPdf->headers->get('content-type'));
-        }
+        $invRes = $this->actingAs($admin)->postJson("/api/v1/quotations/{$quoteId}/convert-to-invoice")
+            ->assertStatus(200);
+        $invoiceId = $invRes->json('invoice.id');
 
-        if ($receipt) {
-            $recPdf = $this->actingAs($admin)->get("/api/v1/receipts/{$receipt->id}/pdf");
-            $recPdf->assertStatus(200);
-            $this->assertEquals('application/pdf', $recPdf->headers->get('content-type'));
-        }
+        $payRes = $this->actingAs($admin)->postJson("/api/v1/invoices/{$invoiceId}/record-payment", [
+            'amount' => 5000,
+            'payment_method' => 'mpesa_till',
+            'transaction_reference' => 'PDFTEST123',
+        ])->assertStatus(201);
+        $receiptId = $payRes->json('receipt.id');
+
+        $quotePdf = $this->actingAs($admin)->get("/api/v1/quotations/{$quoteId}/pdf");
+        $quotePdf->assertStatus(200);
+        $this->assertEquals('application/pdf', $quotePdf->headers->get('content-type'));
+
+        $invPdf = $this->actingAs($admin)->get("/api/v1/invoices/{$invoiceId}/pdf");
+        $invPdf->assertStatus(200);
+        $this->assertEquals('application/pdf', $invPdf->headers->get('content-type'));
+
+        $recPdf = $this->actingAs($admin)->get("/api/v1/receipts/{$receiptId}/pdf");
+        $recPdf->assertStatus(200);
+        $this->assertEquals('application/pdf', $recPdf->headers->get('content-type'));
     }
 }

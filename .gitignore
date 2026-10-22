@@ -27,6 +27,8 @@ backend/public/build
 .phpunit.result.cache
 .phpunit.cache/
 backend/.phpunit.cache/
+sample_documents/
+backend/export_sample_pdfs.php
 
 # OS and Editor files
 .DS_Store

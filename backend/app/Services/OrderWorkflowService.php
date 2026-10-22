@@ -12,7 +12,7 @@ use App\Models\PaymentReceipt;
 use App\Models\Product;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\DB;
-use Exception;
+use App\Exceptions\BusinessRuleException;
 
 class OrderWorkflowService
 {
@@ -53,10 +53,12 @@ class OrderWorkflowService
                 ];
             }
 
-            $discount = $data['discount_amount'] ?? 0.0;
+            // Prices are always computed server-side. Online checkout never accepts a client discount;
+            // the delivery fee comes from system settings, never from the request.
+            $discount = 0.0;
             $vatRate = (float) SystemSetting::get('vat_rate', 16);
             $vat = (($subtotal - $discount) * $vatRate) / 100.0;
-            $deliveryFee = $data['delivery_fee'] ?? 0.0;
+            $deliveryFee = (float) SystemSetting::get('delivery_fee_default', 0);
             $grandTotal = ($subtotal - $discount) + $vat + $deliveryFee;
 
             $order = Order::create([
@@ -89,9 +91,18 @@ class OrderWorkflowService
     public function updateOrderStatus(Order $order, string $newStatus, ?int $staffId = null): Order
     {
         return DB::transaction(function () use ($order, $newStatus, $staffId) {
+            $order = Order::with('items')->lockForUpdate()->findOrFail($order->id);
             $oldStatus = $order->order_status;
 
-            if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+            if ($oldStatus === 'cancelled') {
+                throw new BusinessRuleException('This order has been cancelled and can no longer change status.');
+            }
+
+            if ($newStatus === 'cancelled' && in_array($oldStatus, ['dispatched', 'delivered', 'completed'])) {
+                throw new BusinessRuleException('Orders that have already been dispatched cannot be cancelled. Record a return instead.');
+            }
+
+            if ($newStatus === 'cancelled') {
                 // Release reserved stock back to available pool
                 foreach ($order->items as $item) {
                     $this->inventoryService->releaseReservedStock($item->product_id, $order->location_id, $item->quantity);
@@ -127,8 +138,10 @@ class OrderWorkflowService
     public function convertQuotationToInvoice(Quotation $quotation, ?int $staffId = null): Invoice
     {
         return DB::transaction(function () use ($quotation, $staffId) {
+            $quotation = Quotation::with('items')->lockForUpdate()->findOrFail($quotation->id);
+
             if ($quotation->status === 'converted') {
-                throw new Exception("This quotation has already been converted into an invoice.");
+                throw new BusinessRuleException("This quotation has already been converted into an invoice.");
             }
 
             $invNumber = DocumentNumberService::generateInvoiceNumber();
@@ -172,19 +185,20 @@ class OrderWorkflowService
     public function recordPayment(Invoice $invoice, array $paymentData, int $recordedByUserId): PaymentReceipt
     {
         return DB::transaction(function () use ($invoice, $paymentData, $recordedByUserId) {
-            $recNumber = DocumentNumberService::generateReceiptNumber();
+            // Lock the invoice so two simultaneous payments can't both pass the balance check
+            $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
             $amount = (float) $paymentData['amount'];
 
             if ($amount <= 0) {
-                throw new Exception("Payment amount must be greater than zero.");
+                throw new BusinessRuleException("Payment amount must be greater than zero.");
             }
 
             if ($amount > $invoice->balance_due) {
-                throw new Exception("Payment amount cannot exceed the remaining balance due (KES " . number_format($invoice->balance_due, 2) . ").");
+                throw new BusinessRuleException("Payment amount cannot exceed the remaining balance due (KES " . number_format($invoice->balance_due, 2) . ").");
             }
 
             $receipt = PaymentReceipt::create([
-                'receipt_number' => $recNumber,
+                'receipt_number' => DocumentNumberService::generateReceiptNumber(),
                 'invoice_id' => $invoice->id,
                 'order_id' => $invoice->order_id,
                 'customer_id' => $invoice->customer_id,

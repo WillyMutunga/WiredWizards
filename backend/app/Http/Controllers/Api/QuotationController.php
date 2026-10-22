@@ -11,6 +11,7 @@ use App\Services\DocumentNumberService;
 use App\Services\OrderWorkflowService;
 use App\Services\PdfGeneratorService;
 use Illuminate\Support\Facades\DB;
+use App\Exceptions\BusinessRuleException;
 
 class QuotationController extends Controller
 {
@@ -51,14 +52,26 @@ class QuotationController extends Controller
         ]);
 
         $quotation = DB::transaction(function () use ($validated, $request) {
+            $user = $request->user();
+            $isAdmin = $user->role === 'super_admin';
+            $capPercent = (float) SystemSetting::get('max_agent_discount_percent', 10);
+
             $subtotal = 0.0;
+            $listTotal = 0.0;
             $itemsData = [];
 
             foreach ($validated['items'] as $item) {
                 $product = Product::findOrFail($item['product_id']);
-                $price = $item['unit_price'] ?? ($product->discount_price ?? $product->selling_price);
+                $listPrice = (float) ($product->discount_price ?? $product->selling_price);
+                $price = isset($item['unit_price']) ? (float) $item['unit_price'] : $listPrice;
+
+                if (!$isAdmin && $price < (float) $product->buying_price) {
+                    throw new BusinessRuleException("The price for {$product->name} is below the allowed minimum.");
+                }
+
                 $lineTotal = $price * $item['quantity'];
                 $subtotal += $lineTotal;
+                $listTotal += $listPrice * $item['quantity'];
 
                 $itemsData[] = [
                     'product_id' => $product->id,
@@ -70,7 +83,19 @@ class QuotationController extends Controller
                 ];
             }
 
-            $discount = $validated['discount_amount'] ?? 0.0;
+            $discount = (float) ($validated['discount_amount'] ?? 0.0);
+            if ($discount > $subtotal) {
+                throw new BusinessRuleException('Discount cannot exceed the quotation subtotal.');
+            }
+
+            // Sales agents: total reduction from list price (price overrides + discount) is capped
+            if (!$isAdmin) {
+                $minAllowed = $listTotal * (1 - $capPercent / 100);
+                if (($subtotal - $discount) < $minAllowed - 0.01) {
+                    throw new BusinessRuleException("Total discount exceeds your limit of {$capPercent}%. Ask a super admin to approve a larger discount.");
+                }
+            }
+
             $vatRate = (float) SystemSetting::get('vat_rate', 16);
             $vat = (($subtotal - $discount) * $vatRate) / 100.0;
             $grandTotal = ($subtotal - $discount) + $vat + ($validated['delivery_fee'] ?? 0.0);
@@ -113,9 +138,11 @@ class QuotationController extends Controller
         ]);
     }
 
-    public function downloadPdf($id)
+    public function downloadPdf(Request $request, $id)
     {
         $quotation = Quotation::findOrFail($id);
+        $this->ensureCanView($request, $quotation->customer_id);
+
         $pdf = $this->pdfService->renderQuotation($quotation);
 
         return $pdf->stream("{$quotation->quotation_number}.pdf");

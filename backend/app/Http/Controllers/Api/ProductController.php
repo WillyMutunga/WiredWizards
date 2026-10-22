@@ -67,7 +67,10 @@ class ProductController extends Controller
 
     public function show($identifier)
     {
-        $product = Product::with(['category', 'brand', 'images', 'inventory.location', 'reviews.customer'])
+        $product = Product::with([
+                'category', 'brand', 'images', 'inventory.location',
+                'reviews' => fn ($q) => $q->where('status', 'approved')->with('customer:id,name')->latest(),
+            ])
             ->where('slug', $identifier)
             ->orWhere('id', is_numeric($identifier) ? $identifier : 0)
             ->firstOrFail();

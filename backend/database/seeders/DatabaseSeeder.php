@@ -33,6 +33,8 @@ class DatabaseSeeder extends Seeder
             'contact_phone' => '+254 712 345 678',
             'contact_email' => 'info@wiredwizards.co.ke',
             'office_address' => 'Machakos Town & Nairobi CBD, Kenya',
+            'max_agent_discount_percent' => '10',
+            'delivery_fee_default' => '0',
         ];
 
         foreach ($settings as $key => $val) {
