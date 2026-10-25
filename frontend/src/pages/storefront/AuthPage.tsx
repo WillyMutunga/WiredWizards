@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, UserPlus, KeyRound, Shield } from 'lucide-react';
+import { Lock, UserPlus } from 'lucide-react';
 import { api, extractErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 
@@ -53,12 +53,6 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const quickFillDemo = (email: string, pass: string) => {
-    setTab('login');
-    setLoginId(email);
-    setLoginPassword(pass);
-  };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -76,9 +70,8 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-12 gap-6">
-      {/* Left Auth Form */}
-      <div className="md:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <div className="max-w-lg mx-auto px-4 py-12">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
         <div className="flex border-b border-slate-200 mb-6">
           <button
             type="button"
@@ -127,7 +120,7 @@ export const AuthPage: React.FC = () => {
                 required
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                placeholder="admin@wiredwizards.co.ke or +2547..."
+                placeholder="you@example.com or +2547..."
                 className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:border-solar-600"
               />
             </div>
@@ -236,77 +229,6 @@ export const AuthPage: React.FC = () => {
             </button>
           </form>
         )}
-      </div>
-
-      {/* Right Quick-Fill Pre-Seeded Role Accounts */}
-      <div className="md:col-span-5 bg-navy-900 text-white rounded-2xl p-6 shadow-lg space-y-4">
-        <div className="flex items-center gap-2 text-solar-500 font-extrabold text-sm uppercase tracking-wider">
-          <KeyRound className="w-4 h-4" /> Quick Demo Role Switcher
-        </div>
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Click any pre-seeded role below to auto-fill credentials and inspect role-based permissions:
-        </p>
-
-        <div className="space-y-2.5 text-xs">
-          <button
-            type="button"
-            onClick={() => quickFillDemo('admin@wiredwizards.co.ke', 'Admin@2026')}
-            className="w-full text-left p-3 rounded-xl bg-navy-800 hover:bg-slate-800 border border-slate-700 transition"
-          >
-            <div className="flex items-center justify-between font-bold text-solar-500">
-              <span>1. Super Admin (Director)</span>
-              <Shield className="w-3.5 h-3.5" />
-            </div>
-            <div className="text-slate-300 font-mono text-[11px] mt-0.5">
-              admin@wiredwizards.co.ke • Admin@2026
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Full access: buying_price, stock valuation, staff &amp; system settings.
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => quickFillDemo('inventory@wiredwizards.co.ke', 'Inventory@2026')}
-            className="w-full text-left p-3 rounded-xl bg-navy-800 hover:bg-slate-800 border border-slate-700 transition"
-          >
-            <div className="font-bold text-emerald-400">2. Inventory Manager</div>
-            <div className="text-slate-300 font-mono text-[11px] mt-0.5">
-              inventory@wiredwizards.co.ke • Inventory@2026
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Manages products (incl. VAT status), stock-in, adjustments &amp; branch transfers.
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => quickFillDemo('sales@wiredwizards.co.ke', 'Sales@2026')}
-            className="w-full text-left p-3 rounded-xl bg-navy-800 hover:bg-slate-800 border border-slate-700 transition"
-          >
-            <div className="font-bold text-sky-400">3. Sales Agent (POS)</div>
-            <div className="text-slate-300 font-mono text-[11px] mt-0.5">
-              sales@wiredwizards.co.ke • Sales@2026
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Quotations (10% discount cap), invoice conversion, payment &amp; receipting.
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => quickFillDemo('peter@example.com', 'Customer@2026')}
-            className="w-full text-left p-3 rounded-xl bg-navy-800 hover:bg-slate-800 border border-slate-700 transition"
-          >
-            <div className="font-bold text-amber-400">4. Customer (Kioko Farms Ltd)</div>
-            <div className="text-slate-300 font-mono text-[11px] mt-0.5">
-              peter@example.com • Customer@2026
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Online checkout, order tracking, and downloading own PDF invoices &amp; receipts.
-            </div>
-          </button>
-        </div>
       </div>
     </div>
   );
