@@ -53,8 +53,8 @@ export const HomePage: React.FC = () => {
   return (
     <div>
       {/* Hero Banner */}
-      <section className="bg-gradient-to-r from-navy-950 via-navy-900 to-engineering-700 text-white py-12 px-4 border-b-4 border-solar-600">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <section className="bg-gradient-to-r from-navy-950 via-navy-900 to-engineering-700 text-white py-12 px-4 sm:px-6 border-b-4 border-solar-600">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-5">
             <div className="inline-flex items-center gap-2 bg-solar-600/20 border border-solar-500/40 text-solar-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
               <Sun className="w-4 h-4" /> Tier-1 Solar Engineering &amp; Supplies
@@ -128,8 +128,8 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Trust Strip */}
-      <section className="bg-white border-b border-slate-200 py-4 px-4 shadow-sm">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+      <section className="bg-white border-b border-slate-200 py-4 px-4 sm:px-6 shadow-sm">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
           <div className="flex items-center gap-3">
             <ShieldCheck className="w-8 h-8 text-emerald-600 shrink-0" />
             <div>
@@ -162,7 +162,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 space-y-12">
         {/* Categories Grid */}
         <section>
           <div className="flex items-center justify-between mb-4">

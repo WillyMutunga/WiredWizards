@@ -16,6 +16,7 @@ import { useCartStore } from '../../store/cartStore';
 import { useCompareStore } from '../../store/compareStore';
 import { useAuthStore } from '../../store/authStore';
 import { VatStatusBadge } from '../../components/common/VatStatusBadge';
+import { SolarProductArtwork } from '../../components/storefront/SolarProductArtwork';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -101,15 +102,8 @@ export const ProductDetailPage: React.FC = () => {
       {/* Main Product Box */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Image Area */}
-        <div className="lg:col-span-5 flex flex-col items-center justify-center bg-slate-100 rounded-xl p-6 border border-slate-200 min-h-[320px]">
-          {product.primary_image ? (
-            <img src={product.primary_image} alt={product.name} className="max-h-72 object-contain" />
-          ) : (
-            <div className="text-center text-slate-400">
-              <Sun className="w-24 h-24 text-solar-500 mx-auto mb-2" />
-              <span className="font-mono text-xs">{product.sku}</span>
-            </div>
-          )}
+        <div className="lg:col-span-5 flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-200/60 rounded-xl p-6 border border-slate-200 min-h-[320px] group">
+          <SolarProductArtwork product={product} />
         </div>
 
         {/* Right Product Details */}
