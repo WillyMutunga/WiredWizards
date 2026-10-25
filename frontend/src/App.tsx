@@ -91,6 +91,14 @@ export const App: React.FC = () => {
             }
           />
           <Route
+            path="reviews"
+            element={
+              <RoleGuard allowedRoles={['super_admin']}>
+                <UsersSettingsPage mode="reviews" />
+              </RoleGuard>
+            }
+          />
+          <Route
             path="settings"
             element={
               <RoleGuard allowedRoles={['super_admin']}>

@@ -9,6 +9,7 @@ import {
   Receipt,
   ClipboardList,
   Users,
+  MessageSquareQuote,
   Settings,
   Store,
   LogOut,
@@ -68,6 +69,12 @@ export const AdminLayout: React.FC = () => {
       label: 'Staff & Role Access',
       to: '/admin/users',
       icon: Users,
+      roles: ['super_admin'],
+    },
+    {
+      label: 'Review Moderation',
+      to: '/admin/reviews',
+      icon: MessageSquareQuote,
       roles: ['super_admin'],
     },
     {

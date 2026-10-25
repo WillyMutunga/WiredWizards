@@ -1,9 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, GitCompare, Zap, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
-import { formatKes } from '../../api/client';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  ShoppingCart,
+  GitCompare,
+  Zap,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Heart,
+} from 'lucide-react';
+import { api, formatKes } from '../../api/client';
 import { useCartStore } from '../../store/cartStore';
 import { useCompareStore } from '../../store/compareStore';
+import { useAuthStore } from '../../store/authStore';
 import { VatStatusBadge } from '../common/VatStatusBadge';
 import { SolarProductArtwork } from './SolarProductArtwork';
 
@@ -26,9 +35,12 @@ const PRIORITY_SPEC_KEYS = [
 ];
 
 export const ProductCard: React.FC<Props> = ({ product }) => {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const addItem = useCartStore((s) => s.addItem);
   const compareItems = useCompareStore((s) => s.items);
   const toggleCompare = useCompareStore((s) => s.toggleCompare);
+  const [wishlisted, setWishlisted] = useState(false);
 
   const isCompared = compareItems.some((i) => i.id === product.id);
   const sellingPrice = Number(product.selling_price || 0);
@@ -40,7 +52,6 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
   const totalAvailable = Number(product.inventory_summary?.total_available ?? 10);
   const specs = product.technical_specs || {};
 
-  // Pick the 2 most meaningful electrical specs first instead of weight
   const sortedSpecEntries = Object.entries(specs).sort(([a], [b]) => {
     const idxA = PRIORITY_SPEC_KEYS.indexOf(a);
     const idxB = PRIORITY_SPEC_KEYS.indexOf(b);
@@ -50,6 +61,20 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
     return 0;
   });
   const topSpecs = sortedSpecEntries.slice(0, 2);
+
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      const res = await api.post('/wishlist/toggle', { product_id: product.id });
+      setWishlisted(Boolean(res.data?.in_wishlist));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div className="group bg-white rounded-2xl border border-slate-200/90 hover:border-solar-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden">
@@ -66,21 +91,36 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
           </span>
         )}
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            toggleCompare(product);
-          }}
-          title="Add to Technical Comparison"
-          className={`absolute top-3 right-3 p-2 rounded-full border transition shadow-sm ${
-            isCompared
-              ? 'bg-engineering-700 text-white border-engineering-700'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-solar-500 hover:text-solar-600'
-          }`}
-        >
-          <GitCompare className="w-4 h-4" />
-        </button>
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={handleToggleWishlist}
+            title="Save to Wishlist"
+            className={`p-2 rounded-full border transition shadow-sm ${
+              wishlisted
+                ? 'bg-rose-600 text-white border-rose-600'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-rose-500 hover:text-rose-600'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${wishlisted ? 'fill-white' : ''}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              toggleCompare(product);
+            }}
+            title="Add to Technical Comparison"
+            className={`p-2 rounded-full border transition shadow-sm ${
+              isCompared
+                ? 'bg-engineering-700 text-white border-engineering-700'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-solar-500 hover:text-solar-600'
+            }`}
+          >
+            <GitCompare className="w-4 h-4" />
+          </button>
+        </div>
 
         <div className="absolute bottom-2.5 left-3">
           <VatStatusBadge
