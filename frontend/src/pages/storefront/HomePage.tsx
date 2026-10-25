@@ -47,8 +47,8 @@ export const HomePage: React.FC = () => {
   return (
     <div>
       {/* Clean Hero Banner */}
-      <section className="bg-gradient-to-r from-navy-950 via-navy-900 to-engineering-700 text-white py-10 px-4 sm:px-6 border-b-4 border-solar-600">
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <section className="bg-gradient-to-r from-navy-950 via-navy-900 to-engineering-700 text-white py-8 px-3 sm:px-5 border-b-4 border-solar-600">
+        <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-solar-600/20 border border-solar-500/40 text-solar-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
               <Sun className="w-3.5 h-3.5" /> Solar Energy Solutions
@@ -74,7 +74,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Main Content */}
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 space-y-10">
+      <div className="w-full px-3 sm:px-5 py-6 space-y-8">
         {/* Categories Strip */}
         <section>
           <div className="flex items-center justify-between mb-4">

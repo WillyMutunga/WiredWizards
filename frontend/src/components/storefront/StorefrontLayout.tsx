@@ -228,7 +228,7 @@ export const StorefrontLayout: React.FC = () => {
 
       {/* Clean Footer */}
       <footer className="bg-navy-950 text-slate-400 text-xs border-t border-navy-800 mt-16">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="w-full px-3 sm:px-5 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="font-extrabold text-white text-sm mb-2">
               WIRED <span className="text-solar-500">WIZARDS</span> ENGINEERING &amp; GENERAL SUPPLIES LTD

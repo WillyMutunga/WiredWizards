@@ -131,7 +131,7 @@ export const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="w-full px-3 sm:px-5 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
       <form onSubmit={handlePlaceOrder} className="lg:col-span-7 space-y-6">
         {error && (
           <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">

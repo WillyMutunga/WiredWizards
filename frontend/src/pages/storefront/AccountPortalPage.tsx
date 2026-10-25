@@ -26,7 +26,7 @@ export const AccountPortalPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="w-full px-3 sm:px-5 py-6 space-y-6">
       <div className="bg-navy-900 text-white rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold">Customer Self-Service &amp; Document Hub</h1>

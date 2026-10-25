@@ -66,12 +66,12 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="max-w-7xl mx-auto px-4 py-12 text-center text-sm text-slate-500">Loading product specifications...</div>;
+    return <div className="w-full px-3 sm:px-5 py-12 text-center text-sm text-slate-500">Loading product specifications...</div>;
   }
 
   if (!product) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+      <div className="w-full px-3 sm:px-5 py-12 text-center">
         <h2 className="text-lg font-bold">Product Not Found</h2>
         <Link to="/products" className="text-solar-600 text-xs underline mt-2 inline-block">
           Return to Catalog
@@ -89,7 +89,7 @@ export const ProductDetailPage: React.FC = () => {
   const available = Number(product.inventory_summary?.total_available ?? 0);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+    <div className="w-full px-3 sm:px-5 py-6 space-y-6">
       {/* Breadcrumb */}
       <div className="text-xs text-slate-500 flex items-center gap-2">
         <Link to="/" className="hover:text-solar-600">Home</Link>
