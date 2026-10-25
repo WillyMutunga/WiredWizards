@@ -43,6 +43,11 @@ class ProductResource extends JsonResource
             ] : null,
             'selling_price' => (float) $this->selling_price,
             'discount_price' => $this->discount_price ? (float) $this->discount_price : null,
+            'is_vatable' => (bool) $this->is_vatable,
+            'vat_rate' => $this->is_vatable ? (float) $this->vat_rate : 0.0,
+            'vat_status' => $this->is_vatable
+                ? 'VATable (' . rtrim(rtrim(number_format((float) $this->vat_rate, 2), '0'), '.') . '%)'
+                : 'VAT Exempt (Non-VAT)',
             // STRICT PRIVACY: buying_price is only visible to super_admin
             'buying_price' => $this->when($isSuperAdmin, (float) $this->buying_price),
             'warranty_period' => $this->warranty_period,

@@ -13,11 +13,17 @@ class OrderItem extends Model
         'sku',
         'quantity',
         'unit_price',
+        'is_vatable',
+        'vat_rate',
+        'vat_amount',
         'total_price',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'is_vatable' => 'boolean',
+        'vat_rate' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
         'total_price' => 'decimal:2',
     ];
 

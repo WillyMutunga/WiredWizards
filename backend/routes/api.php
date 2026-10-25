@@ -83,6 +83,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/invoices/{id}/pdf', [InvoiceController::class, 'downloadPdf']);
 
     Route::get('/receipts', [PaymentReceiptController::class, 'index']);
+    Route::get('/receipts/{id}', [PaymentReceiptController::class, 'show']);
     Route::get('/receipts/{id}/pdf', [PaymentReceiptController::class, 'downloadPdf']);
 
     // Sales & Order Operations (Super Admin, Inventory Manager, Sales Agent)

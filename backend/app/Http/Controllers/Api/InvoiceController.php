@@ -63,8 +63,8 @@ class InvoiceController extends Controller
 
         return response()->json([
             'message' => 'Payment recorded successfully and official receipt generated.',
-            'receipt' => $receipt,
-            'invoice' => $invoice->fresh(),
+            'receipt' => $receipt->load(['invoice.items', 'order.items', 'customer']),
+            'invoice' => $invoice->fresh(['items']),
         ], 201);
     }
 

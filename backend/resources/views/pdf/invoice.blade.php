@@ -56,15 +56,21 @@
         </tr>
     </table>
 
+    @php
+        $vatableSubtotal = $invoice->items->where('is_vatable', true)->sum('total_price');
+        $nonVatableSubtotal = $invoice->items->where('is_vatable', false)->sum('total_price');
+    @endphp
+
     <table class="items-table">
         <thead>
             <tr>
-                <th style="width: 5%;">#</th>
-                <th style="width: 45%;">Description / Item</th>
-                <th style="width: 15%;">SKU</th>
-                <th style="width: 10%; text-align: center;">Qty</th>
+                <th style="width: 4%;">#</th>
+                <th style="width: 36%;">Description / Item</th>
+                <th style="width: 14%;">SKU</th>
+                <th style="width: 14%; text-align: center;">VAT Status</th>
+                <th style="width: 8%; text-align: center;">Qty</th>
                 <th style="width: 12%;" class="text-right">Unit Price</th>
-                <th style="width: 13%;" class="text-right">Amount (KES)</th>
+                <th style="width: 12%;" class="text-right">Amount (KES)</th>
             </tr>
         </thead>
         <tbody>
@@ -73,6 +79,13 @@
                     <td>{{ $index + 1 }}</td>
                     <td><strong>{{ $item->product_name }}</strong></td>
                     <td>{{ $item->sku }}</td>
+                    <td style="text-align: center;">
+                        @if($item->is_vatable)
+                            <span class="vat-badge-taxable">VAT ({{ number_format($item->vat_rate, 0) }}%)</span>
+                        @else
+                            <span class="vat-badge-exempt">Non-VAT</span>
+                        @endif
+                    </td>
                     <td style="text-align: center;">{{ $item->quantity }}</td>
                     <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
                     <td class="text-right">{{ number_format($item->total_price, 2) }}</td>
@@ -83,19 +96,27 @@
 
     <table style="width: 100%;">
         <tr>
-            <td style="vertical-align: top; width: 55%;">
-                <div class="bank-box">
+            <td style="vertical-align: top; width: 52%;">
+                <div class="bank-box" style="width: 90%;">
                     <strong>Official Payment Channels:</strong><br>
                     &bull; M-Pesa Buy Goods Till: <strong>543210</strong><br>
                     &bull; Bank: <strong>KCB Bank Kenya</strong> | A/C: <strong>1234567890</strong><br>
                     <small>Please quote invoice reference <strong>{{ $invoice->invoice_number }}</strong> on all payments.</small>
                 </div>
             </td>
-            <td style="vertical-align: top; width: 45%;">
-                <table class="totals-table">
+            <td style="vertical-align: top; width: 48%;">
+                <table class="totals-table" style="width: 100%;">
                     <tr>
-                        <td>Subtotal:</td>
-                        <td class="text-right">KES {{ number_format($invoice->subtotal, 2) }}</td>
+                        <td>VATable Items Subtotal:</td>
+                        <td class="text-right">KES {{ number_format($vatableSubtotal, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Non-VAT (Exempt) Subtotal:</td>
+                        <td class="text-right">KES {{ number_format($nonVatableSubtotal, 2) }}</td>
+                    </tr>
+                    <tr style="border-top: 1px solid #cbd5e1;">
+                        <td><strong>Subtotal (Excl. VAT):</strong></td>
+                        <td class="text-right"><strong>KES {{ number_format($invoice->subtotal, 2) }}</strong></td>
                     </tr>
                     @if($invoice->discount_amount > 0)
                         <tr>
@@ -104,7 +125,7 @@
                         </tr>
                     @endif
                     <tr>
-                        <td>VAT (16% Inclusive):</td>
+                        <td>VAT (on VATable Items):</td>
                         <td class="text-right">KES {{ number_format($invoice->vat_amount, 2) }}</td>
                     </tr>
                     <tr class="grand-total">

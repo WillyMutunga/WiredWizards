@@ -79,6 +79,9 @@ class QuotationController extends Controller
                     'sku' => $product->sku,
                     'quantity' => $item['quantity'],
                     'unit_price' => $price,
+                    'is_vatable' => (bool) $product->is_vatable,
+                    'vat_rate' => $product->is_vatable ? (float) $product->vat_rate : 0.0,
+                    'vat_amount' => 0.0, // computed below after discount proration
                     'total_price' => $lineTotal,
                 ];
             }
@@ -96,8 +99,18 @@ class QuotationController extends Controller
                 }
             }
 
-            $vatRate = (float) SystemSetting::get('vat_rate', 16);
-            $vat = (($subtotal - $discount) * $vatRate) / 100.0;
+            // Compute VAT only on VATable items, prorating any overall quotation discount
+            $discountRatio = $subtotal > 0 ? ($subtotal - $discount) / $subtotal : 1.0;
+            $vat = 0.0;
+            foreach ($itemsData as &$row) {
+                if ($row['is_vatable'] && $row['vat_rate'] > 0) {
+                    $taxableLine = $row['total_price'] * $discountRatio;
+                    $row['vat_amount'] = round(($taxableLine * $row['vat_rate']) / 100.0, 2);
+                    $vat += $row['vat_amount'];
+                }
+            }
+            unset($row);
+
             $grandTotal = ($subtotal - $discount) + $vat + ($validated['delivery_fee'] ?? 0.0);
 
             $quote = Quotation::create([

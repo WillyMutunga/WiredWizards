@@ -31,14 +31,20 @@ class OrderWorkflowService
         return DB::transaction(function () use ($data, $customerId, $salesAgentId) {
             $orderNumber = DocumentNumberService::generateOrderNumber();
             $subtotal = 0.0;
+            $vat = 0.0;
 
-            // 1. Validate items and stock
+            // 1. Validate items, stock, and per-product VAT compliance
             $itemsToCreate = [];
             foreach ($data['items'] as $item) {
                 $product = Product::findOrFail($item['product_id']);
-                $unitPrice = $product->discount_price ?? $product->selling_price;
+                $unitPrice = (float) ($product->discount_price ?? $product->selling_price);
                 $lineTotal = $unitPrice * $item['quantity'];
                 $subtotal += $lineTotal;
+
+                $isVatable = (bool) $product->is_vatable;
+                $itemVatRate = $isVatable ? (float) $product->vat_rate : 0.0;
+                $itemVatAmount = $isVatable ? round(($lineTotal * $itemVatRate) / 100.0, 2) : 0.0;
+                $vat += $itemVatAmount;
 
                 // Reserve inventory immediately
                 $this->inventoryService->reserveStock($product->id, $data['location_id'], $item['quantity']);
@@ -49,6 +55,9 @@ class OrderWorkflowService
                     'sku' => $product->sku,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
+                    'is_vatable' => $isVatable,
+                    'vat_rate' => $itemVatRate,
+                    'vat_amount' => $itemVatAmount,
                     'total_price' => $lineTotal,
                 ];
             }
@@ -56,8 +65,6 @@ class OrderWorkflowService
             // Prices are always computed server-side. Online checkout never accepts a client discount;
             // the delivery fee comes from system settings, never from the request.
             $discount = 0.0;
-            $vatRate = (float) SystemSetting::get('vat_rate', 16);
-            $vat = (($subtotal - $discount) * $vatRate) / 100.0;
             $deliveryFee = (float) SystemSetting::get('delivery_fee_default', 0);
             $grandTotal = ($subtotal - $discount) + $vat + $deliveryFee;
 
@@ -169,6 +176,9 @@ class OrderWorkflowService
                     'sku' => $item->sku,
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
+                    'is_vatable' => $item->is_vatable,
+                    'vat_rate' => $item->vat_rate,
+                    'vat_amount' => $item->vat_amount,
                     'total_price' => $item->total_price,
                 ]);
             }

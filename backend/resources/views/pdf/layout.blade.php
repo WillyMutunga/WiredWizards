@@ -21,6 +21,28 @@
             padding-bottom: 15px;
             margin-bottom: 25px;
         }
+        .vat-badge-taxable {
+            display: inline-block;
+            background-color: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fdba74;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .vat-badge-exempt {
+            display: inline-block;
+            background-color: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #86efac;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
         .logo {
             max-width: 220px;
             height: auto;
@@ -139,7 +161,7 @@
             </td>
             <td class="company-meta" style="vertical-align: middle;">
                 <div class="company-title">Wired Wizards Engineering & General Supplies Ltd</div>
-                <div>KRA PIN: <strong>P051982736Z</strong> | VAT: <strong>16% Inclusive</strong></div>
+                <div>KRA PIN: <strong>P051982736Z</strong> | Tax Compliance: <strong>VAT (16%) & Zero/Exempt Solar</strong></div>
                 <div>Machakos Branch & Nairobi Distribution Centre</div>
                 <div>Tel: +254 712 345 678 | Email: sales@wiredwizards.co.ke</div>
             </td>

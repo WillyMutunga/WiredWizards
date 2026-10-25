@@ -202,4 +202,117 @@ class BackendSecurityAndHardeningTest extends TestCase
             'phone' => '+254711223344',
         ])->assertStatus(201);
     }
+
+    public function test_per_product_vat_creation_display_mixed_order_and_receipting(): void
+    {
+        $invManager = User::where('email', 'inventory@wiredwizards.co.ke')->first();
+        $admin = User::where('email', 'admin@wiredwizards.co.ke')->first();
+        $customer = User::where('email', 'peter@example.com')->first();
+        $location = Location::where('code', 'MCK-RET')->first();
+        $categoryId = Product::first()->category_id;
+
+        // 1. Create a Non-VAT Solar Product during product creation
+        $nonVatRes = $this->actingAs($invManager)->postJson('/api/v1/products', [
+            'category_id' => $categoryId,
+            'sku' => 'SOL-NONVAT-TEST-01',
+            'name' => 'Canadian Solar 600W Bi-Facial Panel',
+            'description' => 'High efficiency monocrystalline bi-facial solar module (VAT Exempt).',
+            'buying_price' => 14000,
+            'selling_price' => 20000,
+            'is_vatable' => false,
+        ])->assertStatus(201);
+
+        $this->assertFalse($nonVatRes->json('data.is_vatable'));
+        $this->assertEquals(0.0, (float) $nonVatRes->json('data.vat_rate'));
+        $this->assertEquals('VAT Exempt (Non-VAT)', $nonVatRes->json('data.vat_status'));
+
+        // 2. Create a VAT-Compliant Accessory Product during product creation
+        $vatRes = $this->actingAs($invManager)->postJson('/api/v1/products', [
+            'category_id' => $categoryId,
+            'sku' => 'SOL-VAT-TEST-02',
+            'name' => 'Smart WiFi Energy Meter & Surge Protector',
+            'description' => 'DIN-rail smart energy meter with surge protection (16% VAT).',
+            'buying_price' => 6000,
+            'selling_price' => 10000,
+            'is_vatable' => true,
+            'vat_rate' => 16.00,
+        ])->assertStatus(201);
+
+        $this->assertTrue($vatRes->json('data.is_vatable'));
+        $this->assertEquals(16.0, (float) $vatRes->json('data.vat_rate'));
+        $this->assertEquals('VATable (16%)', $vatRes->json('data.vat_status'));
+
+        $nonVatProductId = $nonVatRes->json('data.id');
+        $vatProductId = $vatRes->json('data.id');
+
+        // Seed stock at Machakos for both products
+        Inventory::create(['product_id' => $nonVatProductId, 'location_id' => $location->id, 'quantity_on_hand' => 10, 'quantity_reserved' => 0]);
+        Inventory::create(['product_id' => $vatProductId, 'location_id' => $location->id, 'quantity_on_hand' => 10, 'quantity_reserved' => 0]);
+
+        // 3. Verify Customer Viewing Product sees clear VAT status
+        $showNonVat = $this->getJson("/api/v1/products/{$nonVatProductId}")->assertStatus(200);
+        $this->assertFalse($showNonVat->json('data.is_vatable'));
+        $this->assertEquals('VAT Exempt (Non-VAT)', $showNonVat->json('data.vat_status'));
+
+        $showVat = $this->getJson("/api/v1/products/{$vatProductId}")->assertStatus(200);
+        $this->assertTrue($showVat->json('data.is_vatable'));
+        $this->assertEquals('VATable (16%)', $showVat->json('data.vat_status'));
+
+        // 4. Customer Checkout with Mixed Cart (1 Non-VAT @ 20,000 + 1 VATable @ 10,000)
+        // Expected: Subtotal = 30,000; VAT = 16% of 10,000 ONLY = 1,600; Grand Total = 31,600
+        $orderRes = $this->actingAs($customer)->postJson('/api/v1/orders/checkout', [
+            'location_id' => $location->id,
+            'payment_method' => 'mpesa_till',
+            'delivery_address' => ['county' => 'Machakos', 'town' => 'Machakos', 'physical_details' => 'Syokimau Rd'],
+            'items' => [
+                ['product_id' => $nonVatProductId, 'quantity' => 1],
+                ['product_id' => $vatProductId, 'quantity' => 1],
+            ],
+        ])->assertStatus(201);
+
+        $this->assertEquals(30000.0, (float) $orderRes->json('order.subtotal'));
+        $this->assertEquals(1600.0, (float) $orderRes->json('order.vat_amount'));
+        $this->assertEquals(31600.0, (float) $orderRes->json('order.total_amount'));
+
+        // 5. Quotation -> Invoice -> Payment Receipt with Mixed Items
+        $quoteRes = $this->actingAs($admin)->postJson('/api/v1/quotations', [
+            'customer_id' => $customer->id,
+            'valid_until' => now()->addDays(7)->toDateString(),
+            'items' => [
+                ['product_id' => $nonVatProductId, 'quantity' => 1],
+                ['product_id' => $vatProductId, 'quantity' => 1],
+            ],
+        ])->assertStatus(201);
+
+        $this->assertEquals(1600.0, (float) $quoteRes->json('quotation.vat_amount'));
+        $this->assertEquals(31600.0, (float) $quoteRes->json('quotation.grand_total'));
+        $quoteId = $quoteRes->json('quotation.id');
+
+        $invRes = $this->actingAs($admin)->postJson("/api/v1/quotations/{$quoteId}/convert-to-invoice")->assertStatus(200);
+        $invId = $invRes->json('invoice.id');
+        $this->assertEquals(1600.0, (float) $invRes->json('invoice.vat_amount'));
+
+        // Record Payment and check Receipting JSON & PDF
+        $payRes = $this->actingAs($admin)->postJson("/api/v1/invoices/{$invId}/record-payment", [
+            'amount' => 31600,
+            'payment_method' => 'mpesa_till',
+            'transaction_reference' => 'VATRECEIPT001',
+        ])->assertStatus(201);
+
+        $receiptId = $payRes->json('receipt.id');
+        $receiptItems = collect($payRes->json('receipt.invoice.items'));
+        $this->assertCount(2, $receiptItems);
+
+        $nonVatLine = $receiptItems->firstWhere('sku', 'SOL-NONVAT-TEST-01');
+        $vatLine = $receiptItems->firstWhere('sku', 'SOL-VAT-TEST-02');
+
+        $this->assertFalse($nonVatLine['is_vatable']);
+        $this->assertEquals(0.0, (float) $nonVatLine['vat_amount']);
+        $this->assertTrue($vatLine['is_vatable']);
+        $this->assertEquals(1600.0, (float) $vatLine['vat_amount']);
+
+        // Verify Receipt Show API & PDF Stream succeed
+        $this->actingAs($customer)->getJson("/api/v1/receipts/{$receiptId}")->assertStatus(200);
+        $this->actingAs($customer)->get("/api/v1/receipts/{$receiptId}/pdf")->assertStatus(200);
+    }
 }

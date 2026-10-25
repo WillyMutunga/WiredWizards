@@ -19,7 +19,7 @@ class PaymentReceiptController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = PaymentReceipt::with(['customer', 'invoice', 'order', 'recorder'])
+        $query = PaymentReceipt::with(['customer', 'invoice.items', 'order.items', 'recorder'])
             ->latest();
 
         if ($user->role === 'customer') {
@@ -27,6 +27,16 @@ class PaymentReceiptController extends Controller
         }
 
         return response()->json($query->paginate(15));
+    }
+
+    public function show(Request $request, $id)
+    {
+        $receipt = PaymentReceipt::with(['customer.customerProfile', 'invoice.items', 'order.items', 'recorder'])
+            ->findOrFail($id);
+
+        $this->ensureCanView($request, $receipt->customer_id);
+
+        return response()->json($receipt);
     }
 
     public function downloadPdf(Request $request, $id)

@@ -59,6 +59,11 @@ class ProductController extends Controller
             $query->where('is_featured', true);
         }
 
+        // VAT status filter (?is_vatable=1 or ?is_vatable=0)
+        if ($request->has('is_vatable')) {
+            $query->where('is_vatable', $request->boolean('is_vatable'));
+        }
+
         $perPage = $request->input('per_page', 12);
         $products = $query->latest()->paginate($perPage);
 
@@ -110,6 +115,8 @@ class ProductController extends Controller
             'buying_price' => 'required|numeric|min:0',
             'selling_price' => 'required|numeric|min:0',
             'discount_price' => 'nullable|numeric|min:0',
+            'is_vatable' => 'required|boolean',
+            'vat_rate' => 'nullable|numeric|min:0|max:100',
             'short_description' => 'nullable|string',
             'description' => 'required|string',
             'warranty_period' => 'nullable|string',
@@ -119,6 +126,10 @@ class ProductController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(4);
+        $defaultVat = (float) \App\Models\SystemSetting::get('vat_rate', 16);
+        $validated['vat_rate'] = $validated['is_vatable']
+            ? (float) ($validated['vat_rate'] ?? $defaultVat)
+            : 0.00;
 
         $product = Product::create($validated);
 
@@ -136,6 +147,8 @@ class ProductController extends Controller
             'buying_price' => 'sometimes|numeric|min:0',
             'selling_price' => 'sometimes|numeric|min:0',
             'discount_price' => 'nullable|numeric|min:0',
+            'is_vatable' => 'sometimes|boolean',
+            'vat_rate' => 'nullable|numeric|min:0|max:100',
             'short_description' => 'nullable|string',
             'description' => 'sometimes|string',
             'warranty_period' => 'nullable|string',
@@ -144,6 +157,13 @@ class ProductController extends Controller
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
         ]);
+
+        if (array_key_exists('is_vatable', $validated)) {
+            $defaultVat = (float) \App\Models\SystemSetting::get('vat_rate', 16);
+            $validated['vat_rate'] = $validated['is_vatable']
+                ? (float) ($validated['vat_rate'] ?? ($product->vat_rate > 0 ? $product->vat_rate : $defaultVat))
+                : 0.00;
+        }
 
         $product->update($validated);
 

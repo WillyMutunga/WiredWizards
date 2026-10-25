@@ -105,6 +105,9 @@ class OrderController extends Controller
                 'sku' => $item->sku,
                 'quantity' => $item->quantity,
                 'unit_price' => $item->unit_price,
+                'is_vatable' => $item->is_vatable,
+                'vat_rate' => $item->vat_rate,
+                'vat_amount' => $item->vat_amount,
                 'total_price' => $item->total_price,
             ]);
         }
@@ -112,7 +115,7 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Order created successfully and stock reserved.',
             'order' => $order->load('items'),
-            'invoice' => $invoice,
+            'invoice' => $invoice->load('items'),
         ], 201);
     }
 

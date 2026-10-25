@@ -24,7 +24,7 @@ class PdfGeneratorService
 
     public function renderReceipt(PaymentReceipt $receipt)
     {
-        $receipt->load(['customer.customerProfile', 'recorder', 'invoice', 'order']);
+        $receipt->load(['customer.customerProfile', 'recorder', 'invoice.items', 'order.items']);
         return Pdf::loadView('pdf.receipt', compact('receipt'))->setPaper('a4', 'portrait');
     }
 }
