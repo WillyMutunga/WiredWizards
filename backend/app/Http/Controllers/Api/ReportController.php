@@ -30,12 +30,14 @@ class ReportController extends Controller
 
         $totalCustomers = User::where('role', 'customer')->count();
 
-        // Stock stats
-        $lowStockCount = Product::whereHas('inventory', function ($q) {
-            $q->selectRaw('product_id, SUM(quantity_on_hand) as sum_hand')
-              ->groupBy('product_id')
-              ->havingRaw('SUM(quantity_on_hand) <= 5');
-        })->count();
+        // PostgreSQL-safe low stock count
+        $lowStockCount = DB::table('products')
+            ->leftJoin('inventory', 'products.id', '=', 'inventory.product_id')
+            ->select('products.id', 'products.min_stock_alert')
+            ->groupBy('products.id', 'products.min_stock_alert')
+            ->havingRaw('COALESCE(SUM(inventory.quantity_on_hand - inventory.quantity_reserved), 0) <= products.min_stock_alert')
+            ->get()
+            ->count();
 
         return response()->json([
             'today_sales' => $todaySales,
@@ -61,11 +63,13 @@ class ReportController extends Controller
             ->join('locations', 'inventory.location_id', '=', 'locations.id')
             ->select(
                 'locations.name as location_name',
+                'locations.code as location_code',
                 DB::raw('SUM(inventory.quantity_on_hand * products.buying_price) as total_cost_value'),
                 DB::raw('SUM(inventory.quantity_on_hand * products.selling_price) as total_retail_value'),
                 DB::raw('SUM(inventory.quantity_on_hand) as total_units')
             )
-            ->groupBy('locations.name')
+            ->groupBy('locations.name', 'locations.code')
+            ->orderBy('locations.id')
             ->get();
 
         return response()->json($valuation);
@@ -87,8 +91,10 @@ class ReportController extends Controller
                     'email' => $agent->email,
                     'phone' => $agent->phone,
                     'quotes_count' => $agent->quotations_count,
+                    'quotations_count' => $agent->quotations_count,
                     'orders_count' => $agent->orders_count,
                     'total_sales' => (float) $totalRevenue,
+                    'total_sales_value' => (float) $totalRevenue,
                 ];
             });
 

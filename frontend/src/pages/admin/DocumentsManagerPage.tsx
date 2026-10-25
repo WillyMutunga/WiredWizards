@@ -204,7 +204,14 @@ export const DocumentsManagerPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {quotations.map((q) => (
+              {quotations.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-slate-400">
+                    No quotations created yet. Click &ldquo;POS Quotation Builder&rdquo; in the sidebar to issue one.
+                  </td>
+                </tr>
+              ) : (
+                quotations.map((q) => (
                 <tr key={q.id} className="border-b border-slate-200">
                   <td className="p-3.5 font-mono font-bold text-navy-900">{q.quotation_number}</td>
                   <td className="p-3.5 font-semibold">{q.customer?.name}</td>
@@ -240,7 +247,8 @@ export const DocumentsManagerPage: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -262,7 +270,14 @@ export const DocumentsManagerPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((inv) => (
+              {invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-slate-400">
+                    No tax invoices generated yet. Convert a quotation or complete a customer checkout to generate an invoice.
+                  </td>
+                </tr>
+              ) : (
+                invoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-slate-200">
                   <td className="p-3.5 font-mono font-bold text-navy-900">{inv.invoice_number}</td>
                   <td className="p-3.5 font-semibold">{inv.customer?.name}</td>
@@ -303,7 +318,8 @@ export const DocumentsManagerPage: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -386,7 +402,14 @@ export const DocumentsManagerPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {receipts.map((rec) => (
+                {receipts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-10 text-center text-slate-400">
+                      No payment receipts recorded yet. Record a payment on any Tax Invoice to issue an official receipt.
+                    </td>
+                  </tr>
+                ) : (
+                  receipts.map((rec) => (
                   <tr key={rec.id} className="border-b border-slate-200">
                     <td className="p-3.5 font-mono font-bold text-emerald-700">{rec.receipt_number}</td>
                     <td className="p-3.5 font-semibold">{rec.customer?.name}</td>
@@ -409,7 +432,8 @@ export const DocumentsManagerPage: React.FC = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

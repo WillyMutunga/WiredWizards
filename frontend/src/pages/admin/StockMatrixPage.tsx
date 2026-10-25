@@ -271,10 +271,12 @@ export const StockMatrixPage: React.FC = () => {
                 </td>
                 <td className="p-3.5 text-center">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                      row.status === 'Healthy'
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                      row.status === 'In Stock' || row.status === 'Healthy'
                         ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
+                        : row.status === 'Low Stock'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-red-100 text-red-800'
                     }`}
                   >
                     {row.status}

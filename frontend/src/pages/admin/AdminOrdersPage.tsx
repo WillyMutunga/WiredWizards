@@ -75,31 +75,39 @@ export const AdminOrdersPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {orders.map((ord) => (
-              <tr key={ord.id} className="border-b border-slate-200">
-                <td className="p-3.5 font-mono font-bold text-navy-900">{ord.order_number}</td>
-                <td className="p-3.5 font-semibold">{ord.customer?.name}</td>
-                <td className="p-3.5 font-mono">{ord.location?.code || `LOC-${ord.location_id}`}</td>
-                <td className="p-3.5 text-right">{formatKes(ord.subtotal)}</td>
-                <td className="p-3.5 text-right text-amber-700 font-semibold">
-                  {formatKes(ord.vat_amount)}
-                </td>
-                <td className="p-3.5 text-right font-extrabold">{formatKes(ord.total_amount)}</td>
-                <td className="p-3.5">
-                  <select
-                    value={ord.order_status}
-                    onChange={(e) => handleStatusChange(ord.id, e.target.value)}
-                    className="p-1.5 border border-slate-300 rounded-lg font-bold uppercase text-[11px] bg-slate-50"
-                  >
-                    {stages.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+            {orders.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="p-10 text-center text-slate-400">
+                  No orders found for the selected stage.
                 </td>
               </tr>
-            ))}
+            ) : (
+              orders.map((ord) => (
+                <tr key={ord.id} className="border-b border-slate-200 hover:bg-slate-50/80">
+                  <td className="p-3.5 font-mono font-bold text-navy-900">{ord.order_number}</td>
+                  <td className="p-3.5 font-semibold">{ord.customer?.name}</td>
+                  <td className="p-3.5 font-mono">{ord.location?.code || `LOC-${ord.location_id}`}</td>
+                  <td className="p-3.5 text-right">{formatKes(ord.subtotal)}</td>
+                  <td className="p-3.5 text-right text-amber-700 font-semibold">
+                    {formatKes(ord.vat_amount)}
+                  </td>
+                  <td className="p-3.5 text-right font-extrabold">{formatKes(ord.total_amount)}</td>
+                  <td className="p-3.5">
+                    <select
+                      value={ord.order_status}
+                      onChange={(e) => handleStatusChange(ord.id, e.target.value)}
+                      className="p-1.5 border border-slate-300 rounded-lg font-bold uppercase text-[11px] bg-slate-50"
+                    >
+                      {stages.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

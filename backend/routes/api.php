@@ -100,6 +100,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             $inv = Invoice::findOrFail($id);
             return response()->json(['link' => WhatsAppService::generateInvoiceShareLink($inv)]);
         });
+
+        // Operational Dashboard & Agent Leaderboard (All Staff)
+        Route::get('/reports/dashboard', [ReportController::class, 'dashboardOverview']);
+        Route::get('/reports/agent-performance', [ReportController::class, 'agentPerformance']);
     });
 
     // Inventory, Transfers, Suppliers & Catalog Write Operations (Super Admin & Inventory Manager)
@@ -136,10 +140,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('/brands/{id}', [BrandController::class, 'destroy']);
 
         Route::apiResource('/suppliers', SupplierController::class);
-
-        // Operational Reports
-        Route::get('/reports/dashboard', [ReportController::class, 'dashboardOverview']);
-        Route::get('/reports/agent-performance', [ReportController::class, 'agentPerformance']);
     });
 
     // Super Admin Exclusive Endpoints
