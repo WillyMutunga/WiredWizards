@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeftRight, Truck, CheckCircle2, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeftRight, Truck, CheckCircle2, Clock, PlusCircle, Trash2, Filter } from 'lucide-react';
 import { api, extractErrorMessage } from '../../api/client';
 
 export const StockTransfersPage: React.FC = () => {
@@ -7,9 +7,11 @@ export const StockTransfersPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [sourceId, setSourceId] = useState(1); // Nairobi
   const [destId, setDestId] = useState(2); // Machakos
-  const [productId, setProductId] = useState(1);
-  const [qty, setQty] = useState(5);
+  const [items, setItems] = useState<Array<{ product_id: number; quantity: number }>>([
+    { product_id: 1, quantity: 5 },
+  ]);
   const [notes, setNotes] = useState('Replenishing retail store solar panel stock');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'pending' | 'dispatched' | 'received'>('ALL');
   const [msg, setMsg] = useState('');
 
   const loadData = () => {
@@ -21,18 +23,24 @@ export const StockTransfersPage: React.FC = () => {
     api.get('/products?per_page=50').then((r) => {
       const list = r.data?.data || [];
       setProducts(list);
-      if (list.length > 0) setProductId(list[0].id);
+      if (list.length > 0) {
+        setItems([{ product_id: list[0].id, quantity: 5 }]);
+      }
     });
   }, []);
 
   const handleInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (sourceId === destId) {
+      alert('Source and destination branches must be different.');
+      return;
+    }
     try {
       const res = await api.post('/transfers/initiate', {
         source_location_id: sourceId,
         destination_location_id: destId,
         notes,
-        items: [{ product_id: productId, quantity: qty }],
+        items,
       });
       setMsg(res.data?.message || 'Transfer initiated!');
       loadData();
@@ -61,6 +69,20 @@ export const StockTransfersPage: React.FC = () => {
     }
   };
 
+  const counts = useMemo(() => {
+    return {
+      total: transfers.length,
+      pending: transfers.filter((t) => t.status === 'pending').length,
+      dispatched: transfers.filter((t) => t.status === 'dispatched' || t.status === 'in_transit').length,
+      received: transfers.filter((t) => t.status === 'received').length,
+    };
+  }, [transfers]);
+
+  const filteredTransfers = useMemo(() => {
+    if (statusFilter === 'ALL') return transfers;
+    return transfers.filter((t) => t.status === statusFilter);
+  }, [transfers, statusFilter]);
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
@@ -71,6 +93,52 @@ export const StockTransfersPage: React.FC = () => {
           <p className="text-xs text-slate-500 mt-0.5">
             Move inventory between Nairobi Warehouse, Machakos Store &amp; Kitui Store with 2-step Dispatch &amp; Receive verification
           </p>
+        </div>
+
+        {/* Summary Queue Pills */}
+        <div className="flex flex-wrap gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('pending')}
+            className={`px-3 py-1.5 rounded-xl font-bold border transition ${
+              statusFilter === 'pending'
+                ? 'bg-amber-600 text-white border-amber-600'
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}
+          >
+            Transfers to Ship: {counts.pending}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('dispatched')}
+            className={`px-3 py-1.5 rounded-xl font-bold border transition ${
+              statusFilter === 'dispatched'
+                ? 'bg-sky-600 text-white border-sky-600'
+                : 'bg-sky-50 text-sky-800 border-sky-200'
+            }`}
+          >
+            Transfers to Receive: {counts.dispatched}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('received')}
+            className={`px-3 py-1.5 rounded-xl font-bold border transition ${
+              statusFilter === 'received'
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}
+          >
+            Completed: {counts.received}
+          </button>
+          {statusFilter !== 'ALL' && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter('ALL')}
+              className="px-3 py-1.5 rounded-xl font-bold border border-slate-300 bg-white text-slate-700"
+            >
+              Show All ({counts.total})
+            </button>
+          )}
         </div>
       </div>
 
@@ -85,10 +153,22 @@ export const StockTransfersPage: React.FC = () => {
         onSubmit={handleInitiate}
         className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4 text-xs"
       >
-        <div className="font-extrabold text-sm text-navy-900 border-b border-slate-100 pb-2">
-          Initiate New Branch Stock Transfer
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <span className="font-extrabold text-sm text-navy-900">
+            Initiate New Branch Stock Transfer
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setItems([...items, { product_id: products[0]?.id || 1, quantity: 2 }])
+            }
+            className="text-solar-600 hover:underline font-bold inline-flex items-center gap-1"
+          >
+            <PlusCircle className="w-3.5 h-3.5" /> Add Another Equipment Line
+          </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block font-bold text-slate-700 mb-1">From Source Branch</label>
             <select
@@ -113,46 +193,86 @@ export const StockTransfersPage: React.FC = () => {
               <option value={3}>KTU-RET (Kitui Store)</option>
             </select>
           </div>
-          <div className="sm:col-span-2">
-            <label className="block font-bold text-slate-700 mb-1">Solar Equipment</label>
-            <select
-              value={productId}
-              onChange={(e) => setProductId(Number(e.target.value))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.sku} — {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Quantity</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(Number(e.target.value))}
-                className="w-20 p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-center"
-              />
-              <button
-                type="submit"
-                className="flex-1 bg-solar-600 hover:bg-solar-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-sm transition"
-              >
-                Initiate
-              </button>
-            </div>
+            <label className="block font-bold text-slate-700 mb-1">Dispatch Notes / Reason</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+            />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          {items.map((line, idx) => (
+            <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+              <div className="sm:col-span-9">
+                <select
+                  value={line.product_id}
+                  onChange={(e) => {
+                    const next = [...items];
+                    next[idx].product_id = Number(e.target.value);
+                    setItems(next);
+                  }}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-medium"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.sku} — {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  value={line.quantity}
+                  onChange={(e) => {
+                    const next = [...items];
+                    next[idx].quantity = Number(e.target.value);
+                    setItems(next);
+                  }}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-center"
+                />
+              </div>
+              <div className="sm:col-span-1 text-right">
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="bg-solar-600 hover:bg-solar-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition"
+          >
+            Initiate Transfer Order
+          </button>
         </div>
       </form>
 
       {/* Transfers List */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {transfers.length === 0 ? (
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between text-xs">
+          <span className="font-extrabold text-navy-900 flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-solar-600" /> Transfer Order Queue ({filteredTransfers.length})
+          </span>
+        </div>
+        {filteredTransfers.length === 0 ? (
           <div className="p-12 text-center text-xs text-slate-500">
-            No inter-branch stock transfers initiated yet. Use the form above to transfer stock between Nairobi, Machakos, and Kitui.
+            No inter-branch stock transfers matching the current filter. Use the form above to transfer stock between Nairobi, Machakos, and Kitui.
           </div>
         ) : (
           <table className="w-full text-left border-collapse text-xs">
@@ -161,12 +281,13 @@ export const StockTransfersPage: React.FC = () => {
                 <th className="p-3.5">Transfer #</th>
                 <th className="p-3.5">Source &rarr; Destination</th>
                 <th className="p-3.5">Items &amp; Quantities</th>
+                <th className="p-3.5">Notes</th>
                 <th className="p-3.5">Status</th>
                 <th className="p-3.5 text-right">Workflow Action</th>
               </tr>
             </thead>
             <tbody>
-              {transfers.map((tr) => (
+              {filteredTransfers.map((tr) => (
                 <tr key={tr.id} className="border-b border-slate-200 hover:bg-slate-50/80">
                   <td className="p-3.5 font-mono font-bold text-navy-900">{tr.transfer_number}</td>
                   <td className="p-3.5 font-semibold">
@@ -182,6 +303,7 @@ export const StockTransfersPage: React.FC = () => {
                       </div>
                     ))}
                   </td>
+                  <td className="p-3.5 text-slate-500 max-w-xs truncate">{tr.notes || '—'}</td>
                   <td className="p-3.5">
                     {tr.status === 'pending' && (
                       <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px]">

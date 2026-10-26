@@ -109,7 +109,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Inventory, Transfers, Suppliers & Catalog Write Operations (Super Admin & Inventory Manager)
     Route::middleware('role:super_admin,inventory_manager')->group(function () {
         Route::prefix('inventory')->group(function () {
+            Route::get('/overview', [InventoryController::class, 'overview']);
             Route::get('/matrix', [InventoryController::class, 'matrix']);
+            Route::get('/purchases', [InventoryController::class, 'purchases']);
+            Route::get('/locations', [InventoryController::class, 'locations']);
+            Route::post('/locations', [InventoryController::class, 'storeLocation']);
+            Route::put('/quick-price', [InventoryController::class, 'quickUpdateItemPrice']);
             Route::post('/stock-in', [InventoryController::class, 'stockIn']);
             Route::post('/adjust', [InventoryController::class, 'adjust']);
             Route::post('/loss-damage', [InventoryController::class, 'recordLossOrDamage']);
