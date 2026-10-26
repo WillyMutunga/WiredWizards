@@ -33,9 +33,11 @@ return new class extends Migration
             $table->unique(['product_id', 'location_id']);
         });
 
-        // Add PostgreSQL Check constraints to guarantee stock never drops below zero
-        DB::statement('ALTER TABLE inventory ADD CONSTRAINT chk_inventory_on_hand CHECK (quantity_on_hand >= 0);');
-        DB::statement('ALTER TABLE inventory ADD CONSTRAINT chk_inventory_reserved CHECK (quantity_reserved >= 0);');
+        // Add Check constraints on PostgreSQL/MySQL to guarantee stock never drops below zero
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE inventory ADD CONSTRAINT chk_inventory_on_hand CHECK (quantity_on_hand >= 0);');
+            DB::statement('ALTER TABLE inventory ADD CONSTRAINT chk_inventory_reserved CHECK (quantity_reserved >= 0);');
+        }
     }
 
     public function down(): void

@@ -30,17 +30,28 @@ jobs:
           npm ci
           npm run build
 
-      - name: 4. Setup PHP 8.3 & Extensions
+      - name: 4. Setup PHP 8.2 (Matches wiredwizards.co.ke PHP 8.2.35)
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, xml, ctype, json, bcmath, pdo, pdo_pgsql, pgsql, gd, zip
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json, bcmath, pdo, pdo_pgsql, pgsql, pdo_sqlite, sqlite3, gd, zip
           coverage: none
 
-      - name: 5. Install Laravel Production Composer Dependencies
+      - name: 5. Install Laravel Production Dependencies & Pre-Seed Live DB
         working-directory: ./backend
         run: |
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          cp .env.example .env
+          sed -i 's|APP_ENV=.*|APP_ENV=production|g' .env
+          sed -i 's|APP_DEBUG=.*|APP_DEBUG=false|g' .env
+          sed -i 's|APP_URL=.*|APP_URL=https://wiredwizards.co.ke|g' .env
+          sed -i 's|DB_CONNECTION=.*|DB_CONNECTION=sqlite|g' .env
+          sed -i '/^DB_HOST=/d; /^DB_PORT=/d; /^DB_DATABASE=/d; /^DB_USERNAME=/d; /^DB_PASSWORD=/d' .env
+          echo "FRONTEND_URL=https://wiredwizards.co.ke" >> .env
+          touch database/database.sqlite
+          php artisan key:generate --force
+          php artisan migrate:fresh --seed --force
+          chmod -R 775 storage bootstrap/cache database
 
       - name: 6. Assemble Unified Full-Stack Web Root Bundle (dist_deploy)
         run: |
@@ -50,7 +61,7 @@ jobs:
           cp -r frontend/dist/* dist_deploy/
           cp frontend/public/.htaccess dist_deploy/.htaccess
 
-          # 2. Copy Laravel Backend into dist_deploy/laravel_core/
+          # 2. Copy Laravel Backend (including pre-seeded database & .env) into dist_deploy/laravel_core/
           rsync -a --exclude='.git' --exclude='tests' --exclude='node_modules' backend/ dist_deploy/laravel_core/
           cp database_exports/wired_wizards_postgres_dump.sql dist_deploy/laravel_core/database/wired_wizards_postgres_dump.sql
 
@@ -60,7 +71,7 @@ jobs:
           # 4. Create api_entry.php in web root to boot Laravel for /api/v1/* requests
           printf "<?php\nuse Illuminate\Http\Request;\ndefine('LARAVEL_START', microtime(true));\nif (file_exists(\$maintenance = __DIR__.'/laravel_core/storage/framework/maintenance.php')) {\n    require \$maintenance;\n}\nrequire __DIR__.'/laravel_core/vendor/autoload.php';\n\$app = require_once __DIR__.'/laravel_core/bootstrap/app.php';\n\$app->handleRequest(Request::capture());\n" > dist_deploy/api_entry.php
 
-      - name: 7. Deploy Unified Bundle to wiredwizards.co.ke via FTP
+      - name: 7. Deploy Unified Bundle to wiredwizards.co.ke public_html via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -72,4 +83,3 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
-            laravel_core/.env

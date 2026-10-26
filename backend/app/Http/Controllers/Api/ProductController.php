@@ -16,13 +16,15 @@ class ProductController extends Controller
         $query = Product::with(['category', 'brand', 'images', 'inventory.location'])
             ->where('is_active', true);
 
+        $likeOp = \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+
         // Search by keyword in name, SKU, or description
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ILIKE', "%{$search}%")
-                  ->orWhere('sku', 'ILIKE', "%{$search}%")
-                  ->orWhere('short_description', 'ILIKE', "%{$search}%");
+            $query->where(function ($q) use ($search, $likeOp) {
+                $q->where('name', $likeOp, "%{$search}%")
+                  ->orWhere('sku', $likeOp, "%{$search}%")
+                  ->orWhere('short_description', $likeOp, "%{$search}%");
             });
         }
 
@@ -48,10 +50,14 @@ class ProductController extends Controller
             $query->where('selling_price', '<=', (float) $request->max_price);
         }
 
-        // PostgreSQL JSONB filter for wattage / power
+        // JSON/JSONB filter for wattage / power
         if ($request->filled('wattage')) {
             $wattage = $request->wattage;
-            $query->whereRaw("technical_specs->>'rated_power' ILIKE ?", ["%{$wattage}%"]);
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+                $query->whereRaw("technical_specs->>'rated_power' ILIKE ?", ["%{$wattage}%"]);
+            } else {
+                $query->where('technical_specs', 'LIKE', "%{$wattage}%");
+            }
         }
 
         // Featured products

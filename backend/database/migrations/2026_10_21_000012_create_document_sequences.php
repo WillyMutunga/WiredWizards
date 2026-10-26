@@ -16,20 +16,33 @@ return new class extends Migration
 
     public function up(): void
     {
-        foreach ($this->sequences as $seq => [$table, $column]) {
-            // Start after the highest existing numeric suffix (e.g. INV-2026-000007 -> 8)
-            $max = DB::table($table)
-                ->selectRaw("COALESCE(MAX(CAST(SUBSTRING($column FROM '[0-9]+$') AS INTEGER)), 0) AS m")
-                ->value('m');
+        if (DB::getDriverName() === 'pgsql') {
+            foreach ($this->sequences as $seq => [$table, $column]) {
+                $max = DB::table($table)
+                    ->selectRaw("COALESCE(MAX(CAST(SUBSTRING($column FROM '[0-9]+$') AS INTEGER)), 0) AS m")
+                    ->value('m');
 
-            DB::statement("CREATE SEQUENCE IF NOT EXISTS $seq START WITH " . ((int) $max + 1));
+                DB::statement("CREATE SEQUENCE IF NOT EXISTS $seq START WITH " . ((int) $max + 1));
+            }
+        } else {
+            \Illuminate\Support\Facades\Schema::create('document_sequences', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->string('name', 30)->primary();
+                $table->unsignedBigInteger('current_value')->default(0);
+            });
+            foreach (array_keys($this->sequences) as $seq) {
+                DB::table('document_sequences')->insert(['name' => $seq, 'current_value' => 10]);
+            }
         }
     }
 
     public function down(): void
     {
-        foreach (array_keys($this->sequences) as $seq) {
-            DB::statement("DROP SEQUENCE IF EXISTS $seq");
+        if (DB::getDriverName() === 'pgsql') {
+            foreach (array_keys($this->sequences) as $seq) {
+                DB::statement("DROP SEQUENCE IF EXISTS $seq");
+            }
+        } else {
+            \Illuminate\Support\Facades\Schema::dropIfExists('document_sequences');
         }
     }
 };

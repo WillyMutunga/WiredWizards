@@ -12,7 +12,12 @@ class DocumentNumberService
 {
     private static function next(string $sequence, string $prefix): string
     {
-        $n = DB::selectOne("SELECT nextval('$sequence') AS n")->n;
+        if (DB::getDriverName() === 'pgsql') {
+            $n = DB::selectOne("SELECT nextval('$sequence') AS n")->n;
+        } else {
+            DB::table('document_sequences')->where('name', $sequence)->increment('current_value');
+            $n = (int) DB::table('document_sequences')->where('name', $sequence)->value('current_value');
+        }
         return sprintf('%s-%s-%06d', $prefix, date('Y'), $n);
     }
 
