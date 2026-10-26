@@ -2,12 +2,19 @@
   RewriteEngine On
   RewriteBase /
 
-  # Allow direct access to existing files, directories, and /api routes
-  RewriteCond %{REQUEST_URI} ^/api/ [OR]
+  # Pass Authorization header to PHP/Laravel Sanctum on cPanel/Apache
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # 1. Route all /api/* and /sanctum/* requests to the Laravel API entry script
+  RewriteCond %{REQUEST_URI} ^/(api|sanctum)/ [NC]
+  RewriteRule ^ api_entry.php [L,QSA]
+
+  # 2. Serve existing static files & directories directly (JS, CSS, images, storage)
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # Route all other requests to React SPA index.html
+  # 3. Route all other frontend URLs to React SPA index.html
   RewriteRule ^ index.html [L]
 </IfModule>

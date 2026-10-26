@@ -25,7 +25,6 @@ jobs:
       - name: 3. Install & Build React Frontend (Production)
         working-directory: ./frontend
         env:
-          # Points production frontend to https://wiredwizards.co.ke/api/v1 unless overridden in GitHub Secrets
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://wiredwizards.co.ke/api/v1' }}
         run: |
           npm ci
@@ -43,62 +42,53 @@ jobs:
         run: |
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
-      - name: 6. Assemble Unified Production Bundle (dist_deploy)
+      - name: 6. Assemble Unified Full-Stack Web Root Bundle (dist_deploy)
         run: |
-          mkdir -p dist_deploy/backend
-          mkdir -p dist_deploy/public_html
+          mkdir -p dist_deploy/laravel_core
 
-          # Copy backend application (excluding local storage/tests)
-          rsync -a --exclude='.git' --exclude='tests' --exclude='node_modules' backend/ dist_deploy/backend/
+          # 1. Copy built React SPA (index.html, assets, .htaccess, logo.jpeg) into web root
+          cp -r frontend/dist/* dist_deploy/
+          cp frontend/public/.htaccess dist_deploy/.htaccess
 
-          # Copy built React SPA into public_html
-          cp -r frontend/dist/* dist_deploy/public_html/
+          # 2. Copy Laravel Backend into dist_deploy/laravel_core/
+          rsync -a --exclude='.git' --exclude='tests' --exclude='node_modules' backend/ dist_deploy/laravel_core/
+          cp database_exports/wired_wizards_postgres_dump.sql dist_deploy/laravel_core/database/wired_wizards_postgres_dump.sql
 
-          # Copy Laravel public/index.php & storage/images into public_html so /api/v1 & SPA share wiredwizards.co.ke
-          cp -r backend/public/images dist_deploy/public_html/ 2>/dev/null || true
+          # 3. Protect laravel_core/ from direct public web access
+          cat << 'EOF' > dist_deploy/laravel_core/.htaccess
+          <IfModule mod_authz_core.c>
+            Require all denied
+          </IfModule>
+          <IfModule !mod_authz_core.c>
+            Order deny,allow
+            Deny from all
+          </IfModule>
+          EOF
 
-      # =========================================================================
-      # OPTION A: Deploy via SSH + Rsync (VPS / Cloud / cPanel with SSH enabled)
-      # Runs automatically when SSH_HOST and SSH_PRIVATE_KEY secrets are configured
-      # =========================================================================
-      - name: 7A. Deploy via SSH to wiredwizards.co.ke
-        if: ${{ secrets.SSH_HOST != '' && secrets.SSH_PRIVATE_KEY != '' }}
-        uses: easingthemes/ssh-deploy@v5.1.0
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USER }}
-          REMOTE_PORT: ${{ secrets.SSH_PORT || '22' }}
-          SOURCE: "dist_deploy/"
-          TARGET: ${{ secrets.REMOTE_TARGET_DIR || '/var/www/wiredwizards.co.ke/' }}
-          ARGS: "-rlgoDzvc -i"
+          # 4. Create api_entry.php in web root to boot Laravel for /api/v1/* requests
+          cat << 'EOF' > dist_deploy/api_entry.php
+          <?php
+          use Illuminate\Http\Request;
+          define('LARAVEL_START', microtime(true));
+          if (file_exists($maintenance = __DIR__.'/laravel_core/storage/framework/maintenance.php')) {
+              require $maintenance;
+          }
+          require __DIR__.'/laravel_core/vendor/autoload.php';
+          $app = require_once __DIR__.'/laravel_core/bootstrap/app.php';
+          $app->handleRequest(Request::capture());
+          EOF
 
-      - name: 7B. Run Post-Deploy Laravel Migrations & Cache on Server (SSH)
-        if: ${{ secrets.SSH_HOST != '' && secrets.SSH_PRIVATE_KEY != '' }}
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.REMOTE_TARGET_DIR || '/var/www/wiredwizards.co.ke' }}/backend
-            php artisan migrate --force
-            php artisan storage:link || true
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-
-      # =========================================================================
-      # OPTION B: Deploy via FTP / FTPS (Standard cPanel Shared Hosting)
-      # Runs automatically when FTP_SERVER, FTP_USERNAME & FTP_PASSWORD are set
-      # =========================================================================
-      - name: 8. Deploy React Storefront & ERP to public_html via FTP
+      - name: 7. Deploy Unified Bundle to wiredwizards.co.ke via FTP
         if: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist_deploy/public_html/
-          server-dir: ${{ secrets.FTP_PUBLIC_DIR || '/public_html/' }}
+          local-dir: ./dist_deploy/
+          server-dir: ${{ secrets.FTP_PUBLIC_DIR || './' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            laravel_core/.env
