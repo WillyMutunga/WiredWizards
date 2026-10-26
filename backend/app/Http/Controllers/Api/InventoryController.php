@@ -114,7 +114,7 @@ class InventoryController extends Controller
             ->select(
                 'order_items.product_id',
                 DB::raw('SUM(order_items.quantity) as qty_sold'),
-                DB::raw('SUM(order_items.line_total) as revenue')
+                DB::raw('SUM(order_items.total_price) as revenue')
             )
             ->groupBy('order_items.product_id')
             ->get()
