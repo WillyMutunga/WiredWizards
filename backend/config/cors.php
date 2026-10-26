@@ -5,6 +5,8 @@ return [
     'allowed_methods' => ['*'],
     'allowed_origins' => array_filter([
         env('FRONTEND_URL', 'http://localhost:5173'),
+        'https://wiredwizards.co.ke',
+        'https://www.wiredwizards.co.ke',
         'http://127.0.0.1:5173',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
