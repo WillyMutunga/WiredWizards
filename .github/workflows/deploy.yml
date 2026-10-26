@@ -30,10 +30,10 @@ jobs:
           npm ci
           npm run build
 
-      - name: 4. Setup PHP 8.2 (Matches wiredwizards.co.ke PHP 8.2.35)
+      - name: 4. Setup PHP 8.3 (Matches wiredwizards.co.ke ea-php83)
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: mbstring, xml, ctype, json, bcmath, pdo, pdo_pgsql, pgsql, pdo_sqlite, sqlite3, gd, zip
           coverage: none
 
@@ -53,7 +53,7 @@ jobs:
           php artisan migrate:fresh --seed --force
           chmod -R 775 storage bootstrap/cache database
 
-      - name: 6. Assemble Unified Full-Stack Web Root Bundle (dist_deploy)
+      - name: 6. Assemble & Zip Full-Stack Bundle (payload.zip)
         run: |
           mkdir -p dist_deploy/laravel_core
 
@@ -71,15 +71,19 @@ jobs:
           # 4. Create api_entry.php in web root to boot Laravel for /api/v1/* requests
           printf "<?php\nuse Illuminate\Http\Request;\ndefine('LARAVEL_START', microtime(true));\nif (file_exists(\$maintenance = __DIR__.'/laravel_core/storage/framework/maintenance.php')) {\n    require \$maintenance;\n}\nrequire __DIR__.'/laravel_core/vendor/autoload.php';\n\$app = require_once __DIR__.'/laravel_core/bootstrap/app.php';\n\$app->handleRequest(Request::capture());\n" > dist_deploy/api_entry.php
 
-      - name: 7. Deploy Unified Bundle to wiredwizards.co.ke public_html via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist_deploy/
-          server-dir: ./
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
+          # 5. Zip entire dist_deploy into single archive for atomic 3-second FTP transfer
+          cd dist_deploy && zip -rq ../payload.zip . .htaccess && cd ..
+
+          # 6. Create atomic server unpacker script
+          printf '<?php\n$zip = new ZipArchive();\nif ($zip->open(__DIR__ . "/payload.zip") === true) {\n    $zip->extractTo(__DIR__);\n    $zip->close();\n    @unlink(__DIR__ . "/payload.zip");\n    @unlink(__FILE__);\n    echo json_encode(["status" => "deployed_successfully", "php" => PHP_VERSION]);\n} else {\n    http_response_code(500);\n    echo json_encode(["status" => "zip_open_failed"]);\n}\n' > _unpack.php
+
+      - name: 7. Upload & Extract Atomic Release on wiredwizards.co.ke
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          curl --ftp-pasv --retry 3 -u "$FTP_USER:$FTP_PASS" -T frontend/public/.htaccess "ftp://$FTP_HOST/.htaccess"
+          curl --ftp-pasv --retry 3 -u "$FTP_USER:$FTP_PASS" -T payload.zip "ftp://$FTP_HOST/payload.zip"
+          curl --ftp-pasv --retry 3 -u "$FTP_USER:$FTP_PASS" -T _unpack.php "ftp://$FTP_HOST/_unpack.php"
+          curl -f -sS "https://wiredwizards.co.ke/_unpack.php"
