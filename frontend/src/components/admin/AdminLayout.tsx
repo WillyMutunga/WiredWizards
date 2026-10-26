@@ -169,6 +169,25 @@ export const AdminLayout: React.FC = () => {
         <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>
+
+        {/* Sticky Bottom Copyright & Attribution Bar */}
+        <footer className="sticky bottom-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 px-6 py-2.5 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+          <div>
+            &copy; {new Date().getFullYear()} All rights reserved.{' '}
+            <strong className="text-navy-900 font-extrabold">Wired Wizards</strong>
+          </div>
+          <div>
+            Powered by{' '}
+            <a
+              href="https://skysoftsystems.co.ke"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-solar-600 hover:text-solar-700 font-extrabold hover:underline transition"
+            >
+              Skysoft Systems
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -221,7 +221,7 @@ export const StorefrontLayout: React.FC = () => {
         target="_blank"
         rel="noreferrer"
         title="Chat on WhatsApp"
-        className="fixed bottom-5 right-5 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-full shadow-xl z-50 flex items-center justify-center transition transform hover:scale-105"
+        className="fixed bottom-14 right-5 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-full shadow-xl z-50 flex items-center justify-center transition transform hover:scale-105"
       >
         <MessageCircle className="w-6 h-6" />
       </a>
@@ -250,10 +250,26 @@ export const StorefrontLayout: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="border-t border-navy-900 py-3.5 text-center text-[11px] text-slate-500">
-          &copy; {new Date().getFullYear()} Wired Wizards Engineering and General Supplies Ltd.
-        </div>
       </footer>
+
+      {/* Sticky Bottom Copyright & Attribution Bar */}
+      <div className="sticky bottom-0 z-30 bg-navy-900/95 backdrop-blur border-t border-navy-800 px-4 sm:px-6 py-2.5 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2 shadow-lg">
+        <div>
+          &copy; {new Date().getFullYear()} All rights reserved.{' '}
+          <strong className="text-white font-extrabold">Wired Wizards</strong>
+        </div>
+        <div>
+          Powered by{' '}
+          <a
+            href="https://skysoftsystems.co.ke"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-solar-500 hover:text-solar-400 font-extrabold hover:underline transition"
+          >
+            Skysoft Systems
+          </a>
+        </div>
+      </div>
     </div>
   );
 };
