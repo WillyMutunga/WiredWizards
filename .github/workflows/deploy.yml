@@ -25,7 +25,7 @@ jobs:
       - name: 3. Install & Build React Frontend (Production)
         working-directory: ./frontend
         env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://wiredwizards.co.ke/api/v1' }}
+          VITE_API_BASE_URL: https://wiredwizards.co.ke/api/v1
         run: |
           npm ci
           npm run build
@@ -55,38 +55,19 @@ jobs:
           cp database_exports/wired_wizards_postgres_dump.sql dist_deploy/laravel_core/database/wired_wizards_postgres_dump.sql
 
           # 3. Protect laravel_core/ from direct public web access
-          cat << 'EOF' > dist_deploy/laravel_core/.htaccess
-          <IfModule mod_authz_core.c>
-            Require all denied
-          </IfModule>
-          <IfModule !mod_authz_core.c>
-            Order deny,allow
-            Deny from all
-          </IfModule>
-          EOF
+          printf "<IfModule mod_authz_core.c>\n  Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n  Order deny,allow\n  Deny from all\n</IfModule>\n" > dist_deploy/laravel_core/.htaccess
 
           # 4. Create api_entry.php in web root to boot Laravel for /api/v1/* requests
-          cat << 'EOF' > dist_deploy/api_entry.php
-          <?php
-          use Illuminate\Http\Request;
-          define('LARAVEL_START', microtime(true));
-          if (file_exists($maintenance = __DIR__.'/laravel_core/storage/framework/maintenance.php')) {
-              require $maintenance;
-          }
-          require __DIR__.'/laravel_core/vendor/autoload.php';
-          $app = require_once __DIR__.'/laravel_core/bootstrap/app.php';
-          $app->handleRequest(Request::capture());
-          EOF
+          printf "<?php\nuse Illuminate\Http\Request;\ndefine('LARAVEL_START', microtime(true));\nif (file_exists(\$maintenance = __DIR__.'/laravel_core/storage/framework/maintenance.php')) {\n    require \$maintenance;\n}\nrequire __DIR__.'/laravel_core/vendor/autoload.php';\n\$app = require_once __DIR__.'/laravel_core/bootstrap/app.php';\n\$app->handleRequest(Request::capture());\n" > dist_deploy/api_entry.php
 
       - name: 7. Deploy Unified Bundle to wiredwizards.co.ke via FTP
-        if: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist_deploy/
-          server-dir: ${{ secrets.FTP_PUBLIC_DIR || './' }}
+          server-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
