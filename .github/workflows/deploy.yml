@@ -74,8 +74,8 @@ jobs:
           # 5. Zip entire dist_deploy into single archive for atomic 3-second FTP transfer
           cd dist_deploy && zip -rq ../payload.zip . .htaccess && cd ..
 
-          # 6. Create atomic server unpacker script
-          printf '<?php\n$zip = new ZipArchive();\nif ($zip->open(__DIR__ . "/payload.zip") === true) {\n    $zip->extractTo(__DIR__);\n    $zip->close();\n    @unlink(__DIR__ . "/payload.zip");\n    @unlink(__FILE__);\n    echo json_encode(["status" => "deployed_successfully", "php" => PHP_VERSION]);\n} else {\n    http_response_code(500);\n    echo json_encode(["status" => "zip_open_failed"]);\n}\n' > _unpack.php
+          # 6. Create atomic server unpacker script (preserves live .env & database across deploys)
+          printf '<?php\n$envPath = __DIR__ . "/laravel_core/.env";\n$dbPath = __DIR__ . "/laravel_core/database/database.sqlite";\n$envBackup = file_exists($envPath) ? file_get_contents($envPath) : null;\n$dbBackup = file_exists($dbPath) ? file_get_contents($dbPath) : null;\n$zip = new ZipArchive();\nif ($zip->open(__DIR__ . "/payload.zip") === true) {\n    $zip->extractTo(__DIR__);\n    $zip->close();\n    if ($envBackup !== null) { file_put_contents($envPath, $envBackup); }\n    if ($dbBackup !== null && strlen($dbBackup) > 0) { file_put_contents($dbPath, $dbBackup); }\n    @unlink(__DIR__ . "/payload.zip");\n    @unlink(__FILE__);\n    echo json_encode(["status" => "deployed_successfully", "php" => PHP_VERSION, "db_preserved" => ($dbBackup !== null)]);\n} else {\n    http_response_code(500);\n    echo json_encode(["status" => "zip_open_failed"]);\n}\n' > _unpack.php
 
       - name: 7. Upload & Extract Atomic Release on wiredwizards.co.ke
         env:
