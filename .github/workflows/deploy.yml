@@ -50,7 +50,7 @@ jobs:
           sed -i 's|DB_PORT=.*|DB_PORT=5432|g' .env
           sed -i 's|DB_DATABASE=.*|DB_DATABASE=wiredwiz_db|g' .env
           sed -i 's|DB_USERNAME=.*|DB_USERNAME=wiredwiz_Willy|g' .env
-          sed -i 's|DB_PASSWORD=.*|DB_PASSWORD="William#20"|g' .env
+          sed -i 's|DB_PASSWORD=.*|DB_PASSWORD='\''William#20'\''|g' .env
           echo "FRONTEND_URL=https://wiredwizards.co.ke" >> .env
           php artisan key:generate --force
           chmod -R 775 storage bootstrap/cache database
