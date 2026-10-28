@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+export const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ||
+  (import.meta as any).env?.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
+    ? `${window.location.origin}/api/v1`
+    : 'http://127.0.0.1:8000/api/v1');
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
